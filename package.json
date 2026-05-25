@@ -1,0 +1,22 @@
+{
+  "name": "3d-ping-pong",
+  "version": "1.0.0",
+  "description": "3D Ping Pong Game with AI using Three.js",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": [
+    "3d",
+    "ping-pong",
+    "game",
+    "three.js",
+    "ai"
+  ],
+  "author": "tbsMihir",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^r128"
+  }
+}
