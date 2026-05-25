@@ -19,6 +19,8 @@ const BALL_SIZE = 0.4;
 const TABLE_HEIGHT = 0.2;
 
 function init() {
+    console.log('Initializing 3D Ping Pong Game...');
+    
     // Scene setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
@@ -30,11 +32,14 @@ function init() {
     camera.lookAt(0, 0, 0);
 
     // Renderer setup
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
     document.body.appendChild(renderer.domElement);
+
+    console.log('WebGL Renderer created');
 
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -51,19 +56,33 @@ function init() {
     directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
 
+    console.log('Lighting setup complete');
+
     // Create game objects
     createTable();
     createPaddles();
     createBall();
     createWalls();
 
+    console.log('Game objects created');
+
     // Initialize AI
     ai = new AI(aiPaddle, ball);
+
+    console.log('AI initialized');
 
     // Event listeners
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('resize', onWindowResize);
+
+    console.log('Event listeners attached');
+
+    // Update UI
+    updateGameStatus();
+    updateGameUI();
+
+    console.log('Game initialized successfully!');
 
     // Start animation loop
     animate();
@@ -109,7 +128,7 @@ function createPaddles() {
     playerPaddle.castShadow = true;
     playerPaddle.receiveShadow = true;
     playerPaddle.userData = {
-        velocity: new Vector3D(0, 0, 0),
+        velocity: { x: 0, y: 0, z: 0 },
         speed: 0.5
     };
     scene.add(playerPaddle);
@@ -126,7 +145,7 @@ function createPaddles() {
     aiPaddle.castShadow = true;
     aiPaddle.receiveShadow = true;
     aiPaddle.userData = {
-        velocity: new Vector3D(0, 0, 0),
+        velocity: { x: 0, y: 0, z: 0 },
         speed: 0.35
     };
     scene.add(aiPaddle);
@@ -140,8 +159,12 @@ function createBall() {
         roughness: 0.1,
         emissive: 0x888800
     });
-    ball = new Ball(0, 2, 0);
-    ball.mesh = new THREE.Mesh(ballGeometry, ballMaterial);
+    ball = {
+        position: { x: 0, y: 2, z: 0 },
+        velocity: { x: 0.3, y: 0, z: 0 },
+        gravity: 0.02,
+        mesh: new THREE.Mesh(ballGeometry, ballMaterial)
+    };
     ball.mesh.castShadow = true;
     ball.mesh.receiveShadow = true;
     scene.add(ball.mesh);
@@ -182,7 +205,7 @@ function handleKeyDown(e) {
         resetGame();
     }
     if (e.key.toLowerCase() === 'd') {
-        ai.cycleDifficulty();
+        if (ai) ai.cycleDifficulty();
         updateGameStatus();
     }
 }
@@ -202,19 +225,22 @@ function updatePaddleMovement() {
                                         Math.min(GAME_HEIGHT / 2 - PADDLE_DEPTH, playerPaddle.position.z));
 
     // AI paddle movement
-    ai.update();
+    if (ai) ai.update();
 }
 
 function updateGame() {
     if (!gameRunning || gamePaused) return;
 
     // Update physics
-    ball.update();
-    updatePaddleMovement();
+    ball.position.x += ball.velocity.x;
+    ball.position.y += ball.velocity.y;
+    ball.position.z += ball.velocity.z;
 
     // Ball physics
-    ball.applyGravity();
+    ball.velocity.y -= ball.gravity;
     ball.position.y = Math.max(BALL_SIZE, ball.position.y); // Keep above table
+
+    updatePaddleMovement();
 
     // Collision with paddles
     if (checkPaddleCollision(playerPaddle, ball)) {
@@ -271,12 +297,12 @@ function checkPaddleCollision(paddle, ball) {
 }
 
 function resetBall() {
-    ball.position = new Vector3D(0, 2, 0);
-    ball.velocity = new Vector3D(
-        (Math.random() > 0.5 ? 1 : -1) * 0.3,
-        0,
-        (Math.random() - 0.5) * 0.2
-    );
+    ball.position = { x: 0, y: 2, z: 0 };
+    ball.velocity = {
+        x: (Math.random() > 0.5 ? 1 : -1) * 0.3,
+        y: 0,
+        z: (Math.random() - 0.5) * 0.2
+    };
 }
 
 function resetGame() {
@@ -310,12 +336,14 @@ function showGameOver(title, message) {
 
 function updateGameUI() {
     document.getElementById('score').textContent = `You: ${playerScore} | AI: ${aiScore}`;
-    document.getElementById('ballSpeed').textContent = ball.velocity.length().toFixed(2);
+    const speed = Math.sqrt(ball.velocity.x * ball.velocity.x + ball.velocity.y * ball.velocity.y + ball.velocity.z * ball.velocity.z);
+    document.getElementById('ballSpeed').textContent = speed.toFixed(2);
 }
 
 function updateGameStatus() {
     const status = gamePaused ? 'PAUSED' : 'Running';
     document.getElementById('gameStatus').textContent = `Status: ${status}`;
+    document.getElementById('difficulty').textContent = ai ? ai.difficulty.toUpperCase() : 'N/A';
 }
 
 function onWindowResize() {
@@ -330,46 +358,6 @@ function animate() {
     updateGame();
 
     renderer.render(scene, camera);
-}
-
-// Vector3D class
-class Vector3D {
-    constructor(x = 0, y = 0, z = 0) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-
-    add(v) {
-        return new Vector3D(this.x + v.x, this.y + v.y, this.z + v.z);
-    }
-
-    multiply(scalar) {
-        return new Vector3D(this.x * scalar, this.y * scalar, this.z * scalar);
-    }
-
-    length() {
-        return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
-    }
-}
-
-// Ball class
-class Ball extends Vector3D {
-    constructor(x, y, z) {
-        super(x, y, z);
-        this.velocity = new Vector3D(0.3, 0, 0);
-        this.gravity = 0.02;
-    }
-
-    update() {
-        this.x += this.velocity.x;
-        this.y += this.velocity.y;
-        this.z += this.velocity.z;
-    }
-
-    applyGravity() {
-        this.velocity.y -= this.gravity;
-    }
 }
 
 // Start the game
