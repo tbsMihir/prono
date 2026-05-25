@@ -43,7 +43,6 @@ jspm_packages/
 *.tgz
 
 # dotenv environment variables file
-.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -51,7 +50,6 @@ __pycache__/
 *$py.class
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -61,3 +59,8 @@ __pycache__/
 # Build
 dist/
 build/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
+config.bat
