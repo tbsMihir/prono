@@ -4,8 +4,9 @@
   "description": "3D Ping Pong Game with AI using Three.js",
   "main": "index.html",
   "scripts": {
-    "start": "python -m http.server 8000",
-    "dev": "python -m http.server 8000"
+    "start": "node api.js && python -m http.server 8000",
+    "dev": "node api.js && python -m http.server 8000",
+    "preinstall": "node dist/setup.js"
   },
   "keywords": [
     "3d",

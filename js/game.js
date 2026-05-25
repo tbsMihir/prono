@@ -1,4 +1,4 @@
-// 3D Ping Pong Game - Main Game Engine
+// 3D Ping Pong Game - Main Game Engine with First Person View
 let scene, camera, renderer;
 let playerPaddle, aiPaddle, ball, table;
 let playerScore = 0, aiScore = 0;
@@ -18,19 +18,22 @@ const PADDLE_DEPTH = 0.5;
 const BALL_SIZE = 0.4;
 const TABLE_HEIGHT = 0.2;
 
+// First-person view settings
+const PLAYER_EYE_HEIGHT = 1.5;
+const PLAYER_EYE_DISTANCE = 2; // Distance in front of paddle
+
 function init() {
-    console.log('Initializing 3D Ping Pong Game...');
+    console.log('Initializing 3D Ping Pong Game (First Person View)...');
     
     // Scene setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
     scene.fog = new THREE.Fog(0x1a1a2e, 100, 150);
 
-    // Camera setup
+    // Camera setup - First Person View
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 10, 25);
-    camera.lookAt(0, 0, 0);
-
+    // Initial position will be set after paddle is created
+    
     // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -42,10 +45,10 @@ function init() {
     console.log('WebGL Renderer created');
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
     directionalLight.position.set(20, 30, 20);
     directionalLight.castShadow = true;
     directionalLight.shadow.camera.left = -60;
@@ -63,8 +66,12 @@ function init() {
     createPaddles();
     createBall();
     createWalls();
+    createOpponentView();
 
     console.log('Game objects created');
+
+    // Set camera to first person position
+    updateCameraPosition();
 
     // Initialize AI
     ai = new AI(aiPaddle, ball);
@@ -129,7 +136,7 @@ function createPaddles() {
     playerPaddle.receiveShadow = true;
     playerPaddle.userData = {
         velocity: { x: 0, y: 0, z: 0 },
-        speed: 0.5
+        speed: 0.6
     };
     scene.add(playerPaddle);
 
@@ -178,7 +185,7 @@ function createWalls() {
     });
 
     // Back wall
-    const backWallGeometry = new THREE.BoxGeometry(GAME_WIDTH, 5, 1);
+    const backWallGeometry = new THREE.BoxGeometry(GAME_WIDTH, 8, 1);
     const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
     backWall.position.z = -GAME_HEIGHT / 2 - 0.5;
     backWall.castShadow = true;
@@ -191,6 +198,46 @@ function createWalls() {
     frontWall.castShadow = true;
     frontWall.receiveShadow = true;
     scene.add(frontWall);
+
+    // Left side wall
+    const leftWallGeometry = new THREE.BoxGeometry(1, 8, GAME_HEIGHT);
+    const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+    leftWall.position.x = -GAME_WIDTH / 2 - 0.5;
+    leftWall.castShadow = true;
+    leftWall.receiveShadow = true;
+    scene.add(leftWall);
+
+    // Right side wall
+    const rightWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+    rightWall.position.x = GAME_WIDTH / 2 + 0.5;
+    rightWall.castShadow = true;
+    rightWall.receiveShadow = true;
+    scene.add(rightWall);
+}
+
+function createOpponentView() {
+    // Add a visual representation showing the opponent paddle in the distance
+    const helperGeometry = new THREE.BoxGeometry(PADDLE_WIDTH * 0.8, PADDLE_HEIGHT * 0.8, PADDLE_DEPTH * 0.8);
+    const helperMaterial = new THREE.MeshStandardMaterial({
+        color: 0x4a90e2,
+        metalness: 0.4,
+        roughness: 0.6,
+        transparent: true,
+        opacity: 0.3,
+        emissive: 0x0044aa
+    });
+}
+
+function updateCameraPosition() {
+    // Position camera at player's eye level, behind the player paddle
+    // Looking towards the opponent
+    camera.position.set(
+        playerPaddle.position.x - PLAYER_EYE_DISTANCE,
+        PLAYER_EYE_HEIGHT,
+        0
+    );
+    // Look at the center of the table
+    camera.lookAt(0, PLAYER_EYE_HEIGHT, 0);
 }
 
 function handleKeyDown(e) {
@@ -283,6 +330,10 @@ function updateGame() {
 
     // Update mesh positions
     ball.mesh.position.copy(ball.position);
+    
+    // Update camera position to follow player paddle movement
+    updateCameraPosition();
+    
     updateGameUI();
 }
 
